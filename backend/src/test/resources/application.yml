@@ -1,0 +1,3 @@
+gemini:
+  model: gemini-2.5-flash
+  api-key: test-key-not-real
