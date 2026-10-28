@@ -1,7 +1,11 @@
 spring:
   application:
     name: syllacal
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
 
 gemini:
-  model: gemini-2.5-flash
+  model: gemini-3.5-flash-lite
   api-key: ${GEMINI_API_KEY}

@@ -132,11 +132,22 @@ public class GeminiEventExtractor implements EventExtractor {
 	private String extractModelText(String responseBody) {
 		try {
 			JsonNode root = jsonMapper.readTree(responseBody);
-			JsonNode textNode = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
-			if (textNode.isMissingNode() || textNode.isNull() || textNode.asString().isBlank()) {
+			JsonNode parts = root.path("candidates").path(0).path("content").path("parts");
+			String text = null;
+			if (parts.isArray()) {
+				for (JsonNode part : parts) {
+					if (part.path("thought").asBoolean(false)) {
+						continue;
+					}
+					if (part.path("text").isString() && !part.path("text").asString().isBlank()) {
+						text = part.path("text").asString();
+					}
+				}
+			}
+			if (text == null) {
 				throw new ExtractionException("Gemini response did not contain model text");
 			}
-			return textNode.asString();
+			return text;
 		}
 		catch (ExtractionException e) {
 			throw e;
@@ -155,6 +166,7 @@ public class GeminiEventExtractor implements EventExtractor {
 
 		Map<String, Object> generationConfig = new LinkedHashMap<>();
 		generationConfig.put("temperature", 0);
+		generationConfig.put("thinkingConfig", Map.of("thinkingLevel", "minimal"));
 		generationConfig.put("responseMimeType", "application/json");
 		generationConfig.put("responseSchema", responseSchema());
 		body.put("generationConfig", generationConfig);

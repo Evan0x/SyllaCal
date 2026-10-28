@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SyllaCal</title>
+  <style>
+    body {
+      font-family: Georgia, "Times New Roman", serif;
+      margin: 0;
+      background: #f6f3ee;
+      color: #1c1917;
+    }
+    main {
+      max-width: 32rem;
+      margin: 4rem auto;
+      padding: 0 1.25rem;
+    }
+    h1 { font-weight: normal; font-size: 2rem; margin-bottom: 0.25rem; }
+    p.lead { color: #57534e; margin-top: 0; }
+    form { display: grid; gap: 0.9rem; }
+    label { display: grid; gap: 0.3rem; font-size: 0.95rem; }
+    input {
+      font: inherit;
+      padding: 0.45rem 0.55rem;
+      border: 1px solid #d6d3d1;
+      background: white;
+    }
+    button {
+      font: inherit;
+      padding: 0.6rem 0.8rem;
+      background: #1c1917;
+      color: #fafaf9;
+      border: 0;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.55; cursor: progress; }
+    #status, #error { min-height: 1.25rem; }
+    #status { color: #57534e; }
+    #error { color: #9f1239; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>SyllaCal</h1>
+  <p class="lead">Turn a course syllabus into a calendar file.</p>
+  <form id="form">
+    <label>Syllabus PDF
+      <input type="file" name="file" accept="application/pdf,.pdf" required>
+    </label>
+    <label>Course name
+      <input type="text" name="courseName" required placeholder="MATH 101">
+    </label>
+    <label>Term start
+      <input type="date" name="termStart" required>
+    </label>
+    <label>Term end
+      <input type="date" name="termEnd" required>
+    </label>
+    <button type="submit" id="submit">Create calendar</button>
+  </form>
+  <p id="status" hidden>Extracting dates…</p>
+  <p id="error" hidden role="alert"></p>
+</main>
+<script>
+  const form = document.getElementById("form");
+  const submit = document.getElementById("submit");
+  const status = document.getElementById("status");
+  const error = document.getElementById("error");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+    error.textContent = "";
+    status.hidden = false;
+    submit.disabled = true;
+    try {
+      const response = await fetch("/api/syllabus", {
+        method: "POST",
+        body: new FormData(form)
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.message || "Could not create the calendar");
+      }
+      const blob = await response.blob();
+      const header = response.headers.get("Content-Disposition") || "";
+      const match = header.match(/filename="([^"]+)"/);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = match ? match[1] : "syllabus.ics";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (failure) {
+      error.hidden = false;
+      error.textContent = failure.message;
+    } finally {
+      status.hidden = true;
+      submit.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
